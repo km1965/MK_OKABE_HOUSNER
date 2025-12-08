@@ -444,14 +444,48 @@ class MononobeApp(ctk.CTk):
                 K=2.0  # Coefficient réservoirs
             )
             
+            # COMBINAISON DES FORCES SISMIQUES (Correction)
+            # V_total = V_base (Inertie Structure) + Pae (Poussée Terres Dyn) + Ph (Hydrodynamique)
+            V_inertie = base_shear['V_design']
+            V_terres = Pae_dyn * L_radier
+            V_hydro = (housner_results.get('Pi', 0) + housner_results.get('Pc', 0)) * L_radier if housner_results else 0
+            
+            # Somme des efforts horizontaux pour la stabilité
+            V_total_seismic = V_inertie + V_terres + V_hydro
+            
             # Vérification Renversement (RPS 2011 Art. 9.2.1)
-            H_app = H_mur * 0.6  # Hauteur d'application environ 0.6H
+            # On prend une hauteur d'application pondérée ou conservative
+            # V_inertie à 0.6H, V_terres à H/3 (approx), V_hydro à hi/hc
+            # Pour simplifier et être conservatif ici, on applique V_inertie à 0.6H
+            H_app = H_mur * 0.6 
+            
+            # Recalcul du moment de renversement total
+            M_overturning_inertie = V_inertie * H_app
+            M_overturning_terres = V_terres * (H_mur / 3) # Point application approx Pae
+            M_overturning_hydro = V_hydro * (0.4 * H_mur) # Point application approx
+            
+            # Si on veut utiliser la méthode check_overturning existante qui prend V et H_app global
+            # On calcule un H_app équivalent ou on passe le moment directement si possible (à voir dans core)
+            # Ici on passe V_total_seismic et un H_app moyen pondéré
+            
+            if V_total_seismic > 0:
+                H_app_equiv = (M_overturning_inertie + M_overturning_terres + M_overturning_hydro) / V_total_seismic
+            else:
+                H_app_equiv = H_app
+
             overturning = RPS2011SeismicVerifications.check_overturning(
                 W_total=W_stab,
-                V_design=base_shear['V_design'],
+                V_design=V_total_seismic,
                 B=B_radier,
-                H_app=H_app
+                H_app=H_app_equiv
             )
+            
+            # Mise à jour pour affichage/export
+             # On sauvegarde les valeurs détaillées
+            base_shear['V_inertie'] = V_inertie
+            base_shear['V_terres'] = V_terres
+            base_shear['V_hydro'] = V_hydro
+            base_shear['V_total'] = V_total_seismic
             
             # Rigidité Radier
             raft_rigidity = RPS2011SeismicVerifications.check_raft_rigidity(

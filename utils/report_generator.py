@@ -504,6 +504,28 @@ class PDFReportGenerator:
             wall_table = Table(wall_data, colWidths=[5*cm, 5*cm, 6*cm])
             wall_table.setStyle(self._get_table_style())
             self.story.append(wall_table)
+            self.story.append(Spacer(1, 0.5*cm))
+            
+            # ===== SECTION 11: VÉRIFICATIONS POTEAUX (Si présents) =====
+            column_result = results.get('column_result')
+            if column_result:
+                col_header = Paragraph("11. VÉRIFICATIONS POTEAUX", self.styles['SectionHeader'])
+                self.story.append(col_header)
+                self.story.append(Spacer(1, 0.3*cm))
+                
+                col_data = [
+                    ['<b>PARAMÈTRE</b>', '<b>VALEUR</b>', '<b>STATUT</b>'],
+                    ['Charge Axiale N_Ed', f"{column_result['N_Ed']:.1f} kN", '-'],
+                    ['Élancement λ', f"{column_result['lambda']:.1f} (λlim={column_result['lambda_lim']:.1f})", 'Flambement' if column_result['needs_second_order'] else 'OK'],
+                    ['Effet 2nd Ordre e2', f"{column_result['e_2']:.1f} mm", 'Pris en compte' if column_result['needs_second_order'] else '-'],
+                    ['Armatures As min', f"{column_result['As_min_cm2']:.2f} cm²", 'Calculé selon EC2 9.5.2'],
+                    ['Armatures As requis', f"{column_result['As_required_cm2']:.2f} cm²", column_result['status']],
+                ]
+                
+                col_table = Table(col_data, colWidths=[5*cm, 5*cm, 6*cm])
+                col_table.setStyle(self._get_table_style())
+                self.story.append(col_table)
+                self.story.append(Spacer(1, 1*cm))
             self.story.append(Spacer(1, 1*cm))
             return
 
