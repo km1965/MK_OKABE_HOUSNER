@@ -292,5 +292,21 @@ class TankInputFrame(ctk.CTkScrollableFrame):
     def set_values(self, values):
         for key, value in values.items():
             if key in self.inputs:
-                self.inputs[key].delete(0, "end")
-                self.inputs[key].insert(0, str(value))
+                widget = self.inputs[key]
+                if isinstance(widget, ctk.CTkEntry):
+                    widget.delete(0, "end")
+                    widget.insert(0, str(value))
+                elif isinstance(widget, ctk.CTkComboBox):
+                    widget.set(str(value))
+                elif isinstance(widget, ctk.CTkCheckBox):
+                    if isinstance(value, bool):
+                        if value:
+                            widget.select()
+                        else:
+                            widget.deselect()
+                    else:
+                        # Fallback si on passe un int (ex: 1 ou 0)
+                        if value:
+                            widget.select()
+                        else:
+                            widget.deselect()

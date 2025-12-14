@@ -11,6 +11,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from datetime import datetime
 import os
 import tempfile
+import math
 
 # Import matplotlib avec gestion du backend
 import matplotlib
@@ -241,6 +242,36 @@ class PDFReportGenerator:
         
         # Si Mode Bâche
         if results.get('mode') == 'tank':
+            # Hauteur pour le point d'application
+            h_wall = results.get('tank_height', results.get('height', 0))
+            
+            # Coefficients sismiques
+            coef_data = [
+                ['<b>COEFFICIENTS SISMIQUES</b>', ''],
+                ['kh (horizontal)', f"{results.get('kh', 0):.4f}"],
+                ['kv (vertical)', f"{results.get('kv', 0):.4f}"],
+            ]
+            
+            coef_table = Table(coef_data, colWidths=[10*cm, 6*cm])
+            coef_table.setStyle(self._get_table_style())
+            self.story.append(coef_table)
+            self.story.append(Spacer(1, 0.5*cm))
+            
+            # Poussée des terres (Momo)
+            terre_data = [
+                ['<b>POUSSÉE DES TERRES (Mononobe-Okabe)</b>', ''],
+                ['Coefficient Kae', f"{results.get('kae', 0):.4f}"],
+                ['Poussée Totale Pae', f"{results.get('pae', 0):.2f} kN/m"],
+                ['  - Part Statique', f"{results.get('Pa_static', 0):.2f} kN/m"],
+                ['  - Incrément Sismique ΔPae', f"{results.get('delta_Pae', 0):.2f} kN/m"],
+                ['Point d\'application', f"{h_wall/3:.2f} m depuis la base"],
+            ]
+            
+            terre_table = Table(terre_data, colWidths=[10*cm, 6*cm])
+            terre_table.setStyle(self._get_table_style())
+            self.story.append(terre_table)
+            self.story.append(Spacer(1, 0.5*cm))
+            
             # Sollicitations
             sol_data = [
                 ['<b>SOLLICITATIONS (ELS/ELU)</b>', ''],
@@ -260,15 +291,12 @@ class PDFReportGenerator:
                 self.story.append(Spacer(1, 0.5*cm))
                 hydro_data = [
                     ['<b>POUSSÉE HYDRODYNAMIQUE (Housner)</b>', ''],
-                    ['<i>Composante Impulsive</i>', ''],
-                    ['  Masse mi', f"{results.get('mi', 0):.2f} t/m"],
-                    ['  Pression Pi', f"{results.get('Pi', 0):.2f} kN/m"],
-                    ['  Hauteur hi', f"{results.get('hi', 0):.2f} m"],
-                    ['<i>Composante Convective</i>', ''],
-                    ['  Masse mc', f"{results.get('mc', 0):.2f} t/m"],
-                    ['  Période Tc', f"{results.get('Tc', 0):.2f} s"],
-                    ['  Pression Pc', f"{results.get('Pc', 0):.2f} kN/m"],
-                    ['  Hauteur hc', f"{results.get('hc', 0):.2f} m"],
+                    ['Hauteur d\'eau hw', f"{results.get('hw', results.get('water_level_in', 0)):.2f} m"],
+                    ['<i>Poussée Hydrostatique (Statique)</i>', f"{results.get('P_hydro_static', 0):.2f} kN/m"],
+                    ['<i>Incrément Dynamique (Sismique)</i>', ''],
+                    ['  - Impulsif Pi', f"{results.get('Pi', 0):.2f} kN/m"],
+                    ['  - Convectif Pc', f"{results.get('Pc', 0):.2f} kN/m"],
+                    ['  - Total Pw (SRSS)', f"{math.sqrt(results.get('Pi', 0)**2 + results.get('Pc', 0)**2):.2f} kN/m"],
                 ]
                 hydro_table = Table(hydro_data, colWidths=[10*cm, 6*cm])
                 hydro_table.setStyle(self._get_table_style())
@@ -294,7 +322,9 @@ class PDFReportGenerator:
         terre_data = [
             ['<b>POUSSÉE DES TERRES (Mononobe-Okabe)</b>', ''],
             ['Coefficient Kae', f"{results.get('kae', 0):.4f}"],
-            ['Poussée Pae', f"{results.get('pae', 0):.2f} kN/m"],
+            ['Poussée Totale Pae', f"{results.get('pae', 0):.2f} kN/m"],
+            ['  - Part Statique', f"{results.get('Pa_static', 0):.2f} kN/m"],
+            ['  - Incrément Sismique ΔPae', f"{results.get('delta_Pae', 0):.2f} kN/m"],
             ['Point d\'application', f"{results.get('height', 0)/3:.2f} m depuis la base"],
         ]
         

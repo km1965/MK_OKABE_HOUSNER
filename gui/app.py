@@ -315,6 +315,10 @@ class MononobeApp(ctk.CTk):
             q_earth_bot_dyn = Kae * values['gamma_soil'] * (values['soil_cover'] + H_mur) * (1 - kv)
             Pae_dyn = (q_earth_top_dyn + q_earth_bot_dyn) / 2 * H_mur
             
+            # Calcul de la poussée statique (pour afficher l'incrément)
+            Pa_static = (q_earth_top_stat + q_earth_bot_stat) / 2 * H_mur
+            delta_Pae = Pae_dyn - Pa_static
+            
             res_earth_seismic = frame.solve_earth_pressure(q_earth_top_dyn, q_earth_bot_dyn)
             
             # Housner
@@ -352,7 +356,14 @@ class MononobeApp(ctk.CTk):
                 res_housner.N_top = math.sqrt(res_impulsive.N_top**2 + res_convective.N_top**2)
                 res_housner.N_bot = math.sqrt(res_impulsive.N_bot**2 + res_convective.N_bot**2)
                 
-                housner_results = {'mi': mi, 'mc': mc, 'Pi': Pi, 'Pc': Pc, 'hi': hi, 'hc': hc}
+                # Poussée hydrostatique (pour affichage PDF)
+                P_hydro_static = 0.5 * 10.0 * values['water_level_in']**2
+                
+                housner_results = {
+                    'mi': mi, 'mc': mc, 'Pi': Pi, 'Pc': Pc, 
+                    'hi': hi, 'hc': hc, 
+                    'P_hydro_static': P_hydro_static
+                }
             
             # Sollicitations CAS 3 (Plein + Séisme)
             cas3_M_A = abs(res_vertical.M_A + res_earth_seismic.M_A - (res_water_static.M_A + res_housner.M_A))
@@ -678,6 +689,9 @@ class MononobeApp(ctk.CTk):
                 'delta_lim': displacement['delta_lim'],
                 'raft_classification': raft_rigidity['classification'],
                 'raft_ratio': raft_rigidity['ratio_L_e'],
+                'Pa_static': Pa_static,
+                'delta_Pae': delta_Pae,
+                'P_hydro_static': housner_results.get('P_hydro_static', 0) if housner_results else 0,
                 'punching_ratio': punching['ratio'],
                 'punching_status': punching['status'],
                 'combined_As': combined['As_required_cm2'],
